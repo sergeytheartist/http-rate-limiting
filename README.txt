@@ -25,7 +25,7 @@ HttpBasicServer/Debug/HttpBasicServer.properties
 2. Run the application. This step will start the server with rate limit=2/10 RPS
 3. Open page http://localhost:9980/ with any browser
 4. Keep refreshing the page to see that rate is limited at 2/10 RPS
-   (You must have HttpBasicServer.properties in Debug folder or the default 100 RPM
+   (You must have HttpBasicServer.properties in Debug folder or the default 100 RPH
    will be applied!)
 
 ## Configuring Http Server
