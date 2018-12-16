@@ -44,3 +44,6 @@ std::mutex and std::lock_guard.
 ## Limitations
 Due to time constraints I used only Win32 installation of Poco and solution is
 not configured to build x64 configurations.
+
+Current implementation uses "Fixed Window" algorithm. "Sliding window" algorithm
+tests are documented and one of them is implemented.
