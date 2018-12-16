@@ -6,6 +6,7 @@
 #include <string>
 #include <queue>
 #include <unordered_map>
+#include <unordered_set>
 #include "Poco/Mutex.h"
 
 using Poco::Mutex;
@@ -31,6 +32,12 @@ class RequestRateTracker
     /// return of the method is 0. When rate limit is exceeded the
     /// return of the method is number of seconds to wait before
     /// request is allowed.
+    ///
+    /// Client to keep track of are added with addClient() method, which
+    /// is thread-safe.
+    ///
+    /// If no clients were added to the RequestRateTracker then all clients
+    /// will be rate-limited.
 {
 public:
     using HTTPClientID = uint32_t;
@@ -50,6 +57,8 @@ public:
 
     static HTTPClientID getClientId(const std::string& clientAddressStr);
 
+    void                addClient(HTTPClientID);
+
 private:
     RequestRate             rateLimit;
         /// Requests arriving at the rate higher than this limit must be denied.
@@ -58,6 +67,7 @@ private:
         /// This mutex must be locked to access the following members:
         ///     - currentWindowStart
         ///     - requestCounts
+        ///     - clientsToTrack
 
     RequestRate::Seconds    currentWindowStart;
         /// Time when request counters started to accumulate for the 
@@ -66,6 +76,11 @@ private:
     using RequestCountHashTable = std::unordered_map<HTTPClientID, int>;
     RequestCountHashTable   requestCounts;
         /// Accumulated number of requests per client for the current window. 
+
+    using ClientSet = std::unordered_set<HTTPClientID>;
+    ClientSet               clients;
+        /// Clients who must be tracked. If this set is empty then all
+        /// clients are tracked.
 
     std::chrono::time_point<std::chrono::steady_clock> 
                             appStartTime;

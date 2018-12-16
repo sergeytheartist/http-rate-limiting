@@ -20,6 +20,12 @@ RequestRateTracker::~RequestRateTracker()
 }
 
 RequestRate::Seconds RequestRateTracker::addRequest(HTTPClientID client)
+    /// Track another request for HTTP client. 'client' must be unique for
+    /// each HTTP requester.
+    /// If no clients were added to the RequestRateTracker then all clients
+    /// will be rate-limited.
+    /// The return is a number of seconds to wait before a request is
+    /// allowed or 0 if current request is within preset rate limit.
 {
     auto now = nowFunction();
     auto sinceStart = std::chrono::duration_cast<std::chrono::seconds>(now - appStartTime);
@@ -28,6 +34,10 @@ RequestRate::Seconds RequestRateTracker::addRequest(HTTPClientID client)
     {
         Mutex::ScopedLock lock(requestCountsMutex);
 
+        if (!clients.empty() 
+            && (clients.find(client) == clients.end())) {
+                return 0;
+        }
         if (secSinceStart >= currentWindowStart &&
             secSinceStart < (currentWindowStart + rateLimit.period))
         {
@@ -41,8 +51,7 @@ RequestRate::Seconds RequestRateTracker::addRequest(HTTPClientID client)
             }
         }
         else {
-            // Request was made beyond the fixed window.
-            // Reclaim memory for the current window and switch to the new one.
+            // Request was made beyond the current window or this is the first request.
             requestCounts.clear();
             currentWindowStart = secSinceStart - (secSinceStart % rateLimit.period);
             requestCounts[client] = 1;
@@ -78,3 +87,9 @@ size_t RequestRateTracker::size() const
     return requestCounts.size();
 }
 
+void RequestRateTracker::addClient(HTTPClientID id)
+{
+    Mutex::ScopedLock lock(requestCountsMutex);
+    if (id != 0)
+        clients.emplace(id);
+}

@@ -132,7 +132,6 @@ public:
         }
     }
 
-private:
     RequestRateTracker  rateTracker;
 };
 
@@ -185,18 +184,24 @@ protected:
             config().getInt("HTTPBasicServer.rateLimitRequests", 100),
             config().getInt("HTTPBasicServer.rateLimitPeriod", 3600)
         };
+        auto client = config().getString("HTTPBasicServer.client", "");
+        auto clientId = RequestRateTracker::getClientId(client);
 
         HTTPServerParams* params = new HTTPServerParams;
         ServerSocket socket(port);
-        HTTPServer server(new TimeRequestHandlerFactory(rateLimit), socket, params);
+        auto factory = new TimeRequestHandlerFactory(rateLimit);
+        if (clientId != 0)
+            factory->rateTracker.addClient(clientId);
+
+        HTTPServer server(factory, socket, params);
         server.start();
-        std::cout << "HTTPBasicServer started. Port=" << port 
-            << " RequestsPerSecondLimit=" << rateLimit.num << "/" << rateLimit.period
-            << std::endl;
+        this->logger().information("Port=" + std::to_string(port) + " rate=" 
+            + std::to_string(rateLimit.num) + "/" + std::to_string(rateLimit.period));
+
         // wait for CTRL-C or kill
         waitForTerminationRequest();
         server.stop();
-        std::cout << "HTTPBasicServer stopped" << std::endl;
+
 
         return Application::EXIT_OK;
     }

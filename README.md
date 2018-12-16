@@ -29,5 +29,18 @@ HttpBasicServer/Debug/HttpBasicServer.properties
    will be applied!)
 
 ## Configuring Http Server
-Available options are documented in Debug/HttpBasicServer.properties file.
+Available options are documented in /Debug/HttpBasicServer.properties file.
+If a particular client is not set in the properties file then ALL clients will
+be rate-limited.
 
+## Building notes
+This solution uses Poco networking libraries https://pocoproject.org/, which must
+be installed for the server and tests to compile and link.
+
+You can build tests and the rate-limiting module without Poco 
+(but not the server) if you replace Poco::Mutex and Poco::ScopedLock with
+std::mutex and std::lock_guard.
+
+## Limitations
+Due to time constraints I used only Win32 installation of Poco and solution is
+not configured to build x64 configurations.

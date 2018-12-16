@@ -34,6 +34,7 @@ public:
     void testInvalidBinaryClientId();
     void testNonFirstRequestsForNextPeriod();
     void testMemoryReclaimed();
+    void testOneClientIsRateLimited();
     void testRequestDeniedWhenManyRequestsAreAtBoundary();
 
     void setUp()
@@ -93,6 +94,7 @@ CppUnit::Test* RequestRateTrackerTest::suite()
     CppUnit_addTest(pSuite, RequestRateTrackerTest, testInvalidBinaryClientId);
     CppUnit_addTest(pSuite, RequestRateTrackerTest, testNonFirstRequestsForNextPeriod);
     CppUnit_addTest(pSuite, RequestRateTrackerTest, testMemoryReclaimed);
+    CppUnit_addTest(pSuite, RequestRateTrackerTest, testOneClientIsRateLimited);
     CppUnit_addTest(pSuite, RequestRateTrackerTest,
         testRequestDeniedWhenManyRequestsAreAtBoundary);
 
@@ -131,7 +133,6 @@ void RequestRateTrackerTest::testInvalidBinaryClientId()
 
 void RequestRateTrackerTest::testNonFirstRequestsForNextPeriod()
 {
-
     // Request issued in the (k+1)th sampling period must not be
     // affected by requests in the (k)th sampling period.
     RequestRate::Seconds waitTime[4];
@@ -167,6 +168,29 @@ void RequestRateTrackerTest::testMemoryReclaimed()
     ManualClock::advance(std::chrono::seconds(16));     // t = +9 in window 12
     requestRateTracker->addRequest(33);
     assertEqual(1, requestRateTracker->size());
+}
+
+void RequestRateTrackerTest::testOneClientIsRateLimited()
+    /// It is required that a particular requester is rate-limited.
+    /// Tests that only particular HTTP client is rate-limited.
+{
+    RequestRate rate = requestRateTracker->getRateLimit();
+    assertEqual(2, rate.num);
+    auto id1 = RequestRateTracker::getClientId("127.0.0.1");
+    auto id2 = RequestRateTracker::getClientId("127.0.0.2");
+    assert(id1 != id2);
+
+    requestRateTracker->addClient(id1);
+
+    requestRateTracker->addRequest(id1);
+    requestRateTracker->addRequest(id2);
+    requestRateTracker->addRequest(id1);
+    requestRateTracker->addRequest(id2);
+    auto waitTime1 = requestRateTracker->addRequest(id1);
+    auto waitTime2 = requestRateTracker->addRequest(id2);
+
+    assertEqual(rate.period, waitTime1);
+    assertEqual(0, waitTime2);
 }
 
 void RequestRateTrackerTest::testRequestDeniedWhenManyRequestsAreAtBoundary()
